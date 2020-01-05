@@ -22,31 +22,23 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.example.android.marsrealestate.network.MarsApi
 import com.example.android.marsrealestate.network.MarsProperty
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-import okhttp3.Dispatcher
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
+import kotlinx.coroutines.*
 import java.lang.Exception
+
+enum class MarsApiStatus { LOADING, ERROR, DONE }
 
 /**
  * The [ViewModel] that is attached to the [OverviewFragment].
  */
 class OverviewViewModel : ViewModel() {
 
-    // The internal MutableLiveData String that stores the status of the most recent request
-    private val _status = MutableLiveData<String>()
-
-    // The external immutable LiveData for the request status String
-    val status: LiveData<String>
+    private val _status = MutableLiveData<MarsApiStatus>()
+    val status: LiveData<MarsApiStatus>
         get() = _status
 
-    private val _property = MutableLiveData<MarsProperty>()
-    val property: LiveData<MarsProperty>
-        get() = _property
+    private val _properties = MutableLiveData<List<MarsProperty>>()
+    val properties: LiveData<List<MarsProperty>>
+        get() = _properties
 
     // Coroutine Job
     private var viewmodelJob = Job()
@@ -78,18 +70,19 @@ class OverviewViewModel : ViewModel() {
             val request = MarsApi.retrofitService.getPropertiesAsync()
 
             try {
+                _status.value = MarsApiStatus.LOADING
 
                 // Result
                 val result = request.await()
+                _status.value = MarsApiStatus.DONE
 
                 // Act
-                if (result?.size > 0) {
-                    _property.value = result[0]
-                }
+                _properties.value = result
             }
             catch (e : Exception)
             {
-                _status.value = "Failure ${e.message}"
+                _status.value = MarsApiStatus.ERROR
+                _properties.value = ArrayList()
             }
         }
     }
