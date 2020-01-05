@@ -17,4 +17,19 @@
 
 package com.example.android.marsrealestate.network
 
-class MarsProperty()
+import com.squareup.moshi.Json
+
+data class MarsProperty(
+
+    @Json(name = "id")
+    val id : String,
+
+    @Json(name = "img_src")
+    val imgSrcUrl : String,
+
+    @Json(name = "type")
+    val type : String,
+
+    @Json(name = "price")
+    val price : Double
+)
