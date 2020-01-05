@@ -22,9 +22,15 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.example.android.marsrealestate.network.MarsApi
 import com.example.android.marsrealestate.network.MarsProperty
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import okhttp3.Dispatcher
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.lang.Exception
 
 /**
  * The [ViewModel] that is attached to the [OverviewFragment].
@@ -38,6 +44,12 @@ class OverviewViewModel : ViewModel() {
     val response: LiveData<String>
         get() = _response
 
+    // Coroutine Job
+    private var viewmodelJob = Job()
+
+    // Coroutine Scope
+    private var coroutineScope = CoroutineScope(viewmodelJob + Dispatchers.Main)
+
     /**
      * Call getMarsRealEstateProperties() on init so we can display status immediately.
      */
@@ -45,19 +57,34 @@ class OverviewViewModel : ViewModel() {
         getMarsRealEstateProperties()
     }
 
+    override fun onCleared() {
+        super.onCleared()
+
+        // Cancel any coroutines in progress
+        viewmodelJob.cancel()
+    }
+
     /**
      * Sets the value of the status LiveData to the Mars API status.
      */
     private fun getMarsRealEstateProperties() {
-        MarsApi.retrofitService.getProperties().enqueue( object : Callback<List<MarsProperty>> {
+        coroutineScope.launch {
 
-            override fun onFailure(call: Call<List<MarsProperty>>, t: Throwable) {
-                _response.value = "Failure ${t.message}"
-            }
+            // Request
+            val request = MarsApi.retrofitService.getPropertiesAsync()
 
-            override fun onResponse(call: Call<List<MarsProperty>>, response: Response<List<MarsProperty>>) {
-                _response.value = "Success: ${response.body()?.size} Mars Properties Received!"
+            try {
+
+                // Result
+                val result = request.await()
+
+                // Act
+                _response.value = "Success: ${result?.size} Mars Properties Received!"
             }
-        })
+            catch (e : Exception)
+            {
+                _response.value = "Failure ${e.message}"
+            }
+        }
     }
 }
